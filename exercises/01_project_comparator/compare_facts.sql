@@ -1,0 +1,84 @@
+CREATE TABLE FACT_HISTORY (
+     ID_FACT INT NOT NULL,
+     ID_PACK INT NOT NULL,
+     FACT_NAME VARCHAR(100),
+     FACT_DATE DATE,
+     FACT_VALUE DECIMAL(10,2),
+     PRIMARY KEY (ID_FACT, ID_PACK)
+);
+
+
+CREATE OR REPLACE PACKAGE PKG_COMPARE_FACT IS
+    STATUS_MODIFIED CONSTANT NUMBER := 1;
+    STATUS_NEW      CONSTANT NUMBER := 2;
+    STATUS_DELETED  CONSTANT NUMBER := 3;
+
+    PROCEDURE COMPARE_FACT(
+        ID_PACK_OLD IN FACT_HISTORY.ID_PACK%TYPE,
+        ID_PACK_NEW IN FACT_HISTORY.ID_PACK%TYPE);
+END PKG_COMPARE_FACT;
+/
+
+
+CREATE OR REPLACE PACKAGE BODY PKG_COMPARE_FACT IS
+
+    PROCEDURE COMPARE_FACT(
+        ID_PACK_OLD IN FACT_HISTORY.ID_PACK%TYPE,
+        ID_PACK_NEW IN FACT_HISTORY.ID_PACK%TYPE) IS
+    BEGIN
+        -- Drop table if exists
+        BEGIN
+            EXECUTE IMMEDIATE 'DROP TABLE TMP_FACT_HISTORY_COMPARE_STATUS';
+        EXCEPTION
+            WHEN OTHERS THEN
+                IF SQLCODE != -942 THEN
+                    RAISE;
+                END IF;
+        END;
+
+        -- Recreate table
+        EXECUTE IMMEDIATE 'CREATE TABLE TMP_FACT_HISTORY_COMPARE_STATUS (ID_FACT NUMBER NOT NULL, STATUS NUMBER NOT NULL)';
+
+        -- Insert "deleted" facts (present in OLD but not in NEW)
+        INSERT INTO TMP_FACT_HISTORY_COMPARE_STATUS (ID_FACT, STATUS)
+        SELECT ID_FACT, STATUS_DELETED
+        FROM (SELECT ID_FACT
+              FROM FACT_HISTORY
+              WHERE ID_PACK = ID_PACK_OLD
+              MINUS
+              SELECT ID_FACT
+              FROM FACT_HISTORY
+              WHERE ID_PACK = ID_PACK_NEW) t;
+
+        -- Insert "added" facts (present in NEW but not in OLD)
+        INSERT INTO TMP_FACT_HISTORY_COMPARE_STATUS (ID_FACT, STATUS)
+        SELECT ID_FACT, STATUS_NEW
+        FROM (SELECT ID_FACT
+              FROM FACT_HISTORY
+              WHERE ID_PACK = ID_PACK_NEW
+              MINUS
+              SELECT ID_FACT
+              FROM FACT_HISTORY
+              WHERE ID_PACK = ID_PACK_OLD) t;
+
+        -- Insert "modified" facts (same ID_FACT, different values)
+        INSERT INTO TMP_FACT_HISTORY_COMPARE_STATUS (ID_FACT, STATUS)
+        WITH FACTS_WITH_HASH AS (
+            SELECT ID_FACT,
+                   ID_PACK,
+                   ORA_HASH(ID_FACT || FACT_NAME || FACT_DATE || FACT_VALUE) AS ROW_HASH
+            FROM FACT_HISTORY
+            WHERE ID_PACK IN (ID_PACK_NEW, ID_PACK_OLD)
+        )
+        SELECT n.ID_FACT, STATUS_MODIFIED
+        FROM FACTS_WITH_HASH n
+                 JOIN FACTS_WITH_HASH o
+                      ON n.ID_FACT = o.ID_FACT
+                          AND n.ID_PACK = ID_PACK_NEW
+                          AND o.ID_PACK = ID_PACK_OLD
+        WHERE n.ROW_HASH != o.ROW_HASH;
+
+        COMMIT;
+    END COMPARE_FACT;
+END PKG_COMPARE_FACT;
+/
