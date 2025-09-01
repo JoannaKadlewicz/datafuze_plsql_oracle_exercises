@@ -1,0 +1,26 @@
+DROP TABLE Sprzedaz CASCADE CONSTRAINTS;
+DROP TABLE Pracownicy CASCADE CONSTRAINTS;
+DROP TABLE Regiony CASCADE CONSTRAINTS;
+
+CREATE TABLE Regiony (
+    id NUMBER PRIMARY KEY,
+    nazwa VARCHAR2(100) NOT NULL
+);
+
+CREATE TABLE Pracownicy (
+    id NUMBER PRIMARY KEY,
+    imie VARCHAR2(50) NOT NULL,
+    nazwisko VARCHAR2(100) NOT NULL,
+    reg_id NUMBER,
+    CONSTRAINT fk_prac_reg FOREIGN KEY (reg_id) REFERENCES Regiony(id)
+);
+
+CREATE TABLE Sprzedaz (
+    id NUMBER PRIMARY KEY,
+    dt DATE NOT NULL,
+    prac_id NUMBER,
+    wartosc NUMBER(10,2),
+    CONSTRAINT fk_sprzedaz_prac FOREIGN KEY (prac_id) REFERENCES Pracownicy(id)
+);
+
+COMMIT;
