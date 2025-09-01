@@ -11,7 +11,7 @@ BUILD IMMEDIATE REFRESH ON DEMAND AS
         JOIN pracownicy p ON p.id = s.prac_id
         JOIN regiony r    ON r.id = p.reg_id
         WHERE s.dt >= DATE '2024-02-01'
-          AND s.dt <  DATE '2025-03-01'
+          AND s.dt <  DATE '2024-03-01'
         GROUP BY p.id, p.imie, p.nazwisko, r.nazwa
     )
     SELECT
@@ -30,3 +30,4 @@ BUILD IMMEDIATE REFRESH ON DEMAND AS
 
 
  SELECT * FROM mv_najlepsi_sprzedawcy_02_2024;
+
