@@ -31,7 +31,9 @@ CREATE OR REPLACE PACKAGE BODY PKG_BOOKING_TICKET IS
         v_count                  NUMBER;
 
     BEGIN
-        SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+        SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;  -- changing isolation level to avoid race condition
+
+                 -- Ensuring up to 50'000 reservations
         SELECT COUNT(*) INTO v_count FROM BOOKING;
         IF v_count >= c_limit THEN
              p_status := C_STATUS_LIMIT_EXCEEDED;
@@ -40,6 +42,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_BOOKING_TICKET IS
             RETURN;
         END IF;
 
+                 -- Ensuring that each user can book up to 5 tickets
         SELECT COUNT(*) INTO v_count FROM BOOKING WHERE pesel = p_pesel;
         IF v_count >= c_user_reservation_limit THEN
            p_status := C_STATUS_USER_OVERBOOKING;
@@ -47,7 +50,6 @@ CREATE OR REPLACE PACKAGE BODY PKG_BOOKING_TICKET IS
             INSERT INTO BOOKING_HISTORY (pesel, status) VALUES (p_pesel, C_STATUS_USER_OVERBOOKING);
             RETURN;
         END IF;
-       
 
         p_idr := SYS_GUID();
         p_status := C_STATUS_OK;

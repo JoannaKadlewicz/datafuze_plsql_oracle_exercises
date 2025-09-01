@@ -17,6 +17,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_COMPARE_FACT IS
         P_ID_PACK_NEW IN FACT_HISTORY.ID_PACK%TYPE) IS
     BEGIN
 
+                -- Dropping table and ignore error if tables does not exist
         BEGIN
             EXECUTE IMMEDIATE 'DROP TABLE TMP_FACT_HISTORY_COMPARE_STATUS';
         EXCEPTION
@@ -28,6 +29,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_COMPARE_FACT IS
 
         EXECUTE IMMEDIATE 'CREATE TABLE TMP_FACT_HISTORY_COMPARE_STATUS (ID_FACT NUMBER NOT NULL, STATUS NUMBER NOT NULL)';
 
+                -- If record exists in OLD, but is missing in NEW -> DELETED
         INSERT INTO TMP_FACT_HISTORY_COMPARE_STATUS (ID_FACT, STATUS)
         SELECT ID_FACT, C_STATUS_DELETED
         FROM (SELECT ID_FACT
@@ -38,6 +40,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_COMPARE_FACT IS
               FROM FACT_HISTORY
               WHERE ID_PACK = P_ID_PACK_NEW) t;
 
+                 -- If record exists in NEW, but is missing in OLD -> NEW
         INSERT INTO TMP_FACT_HISTORY_COMPARE_STATUS (ID_FACT, STATUS)
         SELECT ID_FACT, C_STATUS_NEW
         FROM (SELECT ID_FACT
@@ -48,11 +51,12 @@ CREATE OR REPLACE PACKAGE BODY PKG_COMPARE_FACT IS
               FROM FACT_HISTORY
               WHERE ID_PACK = P_ID_PACK_OLD) t;
 
+                 -- Exist in both, but hashes differ (record was modified) ->  MODIFIED
         INSERT INTO TMP_FACT_HISTORY_COMPARE_STATUS (ID_FACT, STATUS)
         WITH FACTS_WITH_HASH AS (
             SELECT ID_FACT,
                    ID_PACK,
-                   ORA_HASH(ID_FACT || FACT_NAME || FACT_DATE || FACT_VALUE) AS ROW_HASH
+                   ORA_HASH(ID_FACT || FACT_NAME || FACT_DATE || FACT_VALUE) AS ROW_HASH    -- calculate hash
             FROM FACT_HISTORY
             WHERE ID_PACK IN (P_ID_PACK_NEW, P_ID_PACK_OLD)
         )
