@@ -1,4 +1,4 @@
-# Zadanie 5 – Najlepsi sprzedawcy
+# Zadanie 5 - Najlepsi sprzedawcy
 
 ## Opis problemu
 Zarząd firmy chce przyznać premię dla najlepszych sprzedawców w każdym regionie.  
@@ -53,13 +53,13 @@ ORDER BY suma_sprzedazy DESC;
 
 Wyjaśnienie zapytania
 
-`WITH sprzedaz_luty AS (...)` – agreguje sprzedaż pracowników za luty 2024,
+`WITH sprzedaz_luty AS (...)` - agreguje sprzedaż pracowników za luty 2024,
 
-`RANK() OVER (PARTITION BY region ORDER BY suma_sprzedazy DESC)` – przydziela pozycje w każdym regionie,
+`RANK() OVER (PARTITION BY region ORDER BY suma_sprzedazy DESC)` - przydziela pozycje w każdym regionie,
 
-`WHERE pozycja = 1` – wybiera tylko najlepszych sprzedawców w regionie,
+`WHERE pozycja = 1` - wybiera tylko najlepszych sprzedawców w regionie,
 
-`REFRESH ON DEMAND` – umożliwia ręczne odświeżenie widoku.
+`REFRESH ON DEMAND` - umożliwia ręczne odświeżenie widoku `(EXEC DBMS_MVIEW.REFRESH('mv_najlepsi_sprzedawcy_02_2024'))`.
 
 
 Przykład użycia: 
