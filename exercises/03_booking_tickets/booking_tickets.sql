@@ -11,7 +11,6 @@ CREATE TABLE BOOKING (
      ts      DATE DEFAULT SYSDATE
 );
 
-
 CREATE OR REPLACE PACKAGE PKG_BOOKING_TICKET IS
     C_STATUS_OK                   CONSTANT NUMBER := 0;
     C_STATUS_LIMIT_EXCEEDED       CONSTANT NUMBER := 1;
@@ -45,6 +44,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_BOOKING_TICKET IS
         v_count                  NUMBER;
 
     BEGIN
+        SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
         SELECT COUNT(*) INTO v_count FROM BOOKING;
         IF v_count >= c_limit THEN
              p_status := C_STATUS_LIMIT_EXCEEDED;
@@ -63,15 +63,14 @@ CREATE OR REPLACE PACKAGE BODY PKG_BOOKING_TICKET IS
        
 
         p_idr := SYS_GUID();
-        INSERT INTO BOOKING (idr, pesel) VALUES (p_idr, p_pesel);
         p_status := C_STATUS_OK;
+        INSERT INTO BOOKING (idr, pesel) VALUES (p_idr, p_pesel);
         INSERT INTO BOOKING_HISTORY (idr, pesel, status) VALUES (p_idr, p_pesel, C_STATUS_OK);
         COMMIT;
 
     END BOOK_TICKET;
-   
-   
-   
+
+
     PROCEDURE CANCEL_BOOKING(
         p_idr IN BOOKING_HISTORY.idr%TYPE,
         p_pesel IN BOOKING_HISTORY.pesel%TYPE,
